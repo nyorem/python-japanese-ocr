@@ -11,7 +11,7 @@ import scipy as sp
 import sys
 import time
 
-nthreads = 6
+nthreads = 4
 assert nthreads < cpu_count()
 
 # Binarize an image
@@ -76,8 +76,10 @@ def find_sections(img, verbose=False, dirname="results"):
     draw_contours(ctrs, img, w_rect=2, verbose=verbose)
     ii = 0
     for ctr in ctrs:
-        _, _, w, _ = cv2.boundingRect(ctr)
-        if abs(w - img_w) < 600:
+        _, _, w, h = cv2.boundingRect(ctr)
+        ratio_w, ratio_h = w / img_w, h / img_h
+        if ratio_h > 0.1:
+        # if ratio_w > 0.25:
             section = get_rect(img, ctr)
             sections.append(section)
             cv2.imwrite("{}/section{}.png".format(dirname, ii), section)
@@ -97,7 +99,7 @@ def find_text(section, verbose=False, section_idx=None, dirname="results"):
     text_width = 35
 
     size = (text_width // 2, 10)
-    # TODO: correctly sort text
+    # TODO: correctly sort text (left to right and top to bottom)
     def sort_key(ctr):
         x, y, w, h = cv2.boundingRect(ctr)
         xx, yy = x + w, y + h
@@ -175,6 +177,7 @@ if __name__ == "__main__":
     verbose = args.verbose
     fname = args.image
 
+    assert os.path.isfile(fname), "Image {} does not exist".format(fname)
     dirname = "results_{}".format(os.path.splitext(os.path.basename(fname))[0])
 
     if not ocr:

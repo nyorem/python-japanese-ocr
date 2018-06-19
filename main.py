@@ -49,6 +49,7 @@ def draw_contours(ctrs, img, w_rect=2, fname=None, verbose=False):
         cv2.rectangle(img_contours, (x, y), (x + w, y + h), (0, 255, 0), w_rect)
         font = cv2.FONT_HERSHEY_SIMPLEX
         cv2.putText(img_contours, str(i), (x + w//2, y + h//2), font, 1, (0, 0, 255), 1, cv2.LINE_AA)
+        # cv2.putText(img_contours, str(x), (x + w//4, y + h//4), font, 1, (255, 0, 0), 5, cv2.LINE_AA)
     if fname is not None:
         cv2.imwrite(fname, img_contours)
     if verbose:
@@ -71,6 +72,11 @@ def find_sections(img, verbose=False, dirname="results"):
 
     sections = []
     size = (10, 100)
+
+    # Crop the image a little to avoid outliers on the side of the page
+    offsets = (2, 20)
+    img = img[offsets[0]:-offsets[0], offsets[1]:-offsets[1]]
+
     sort_key = lambda ctr: cv2.boundingRect(ctr)[1]
     ctrs = find_contours_text(img, size, verbose=verbose, sort_key=sort_key)
     draw_contours(ctrs, img, w_rect=2, verbose=verbose)
@@ -87,6 +93,41 @@ def find_sections(img, verbose=False, dirname="results"):
 
     return sections
 
+# Sort contours left from right, top to bottom
+def sort_contours(ctrs):
+    threshold = 10
+
+    # Find columns (sort by x)
+    ctrs = sorted(ctrs, key=lambda ctr: -cv2.boundingRect(ctr)[0])
+    cols = []
+    col = []
+    prev = cv2.boundingRect(ctrs[0])[0]
+    for i, ctr in enumerate(ctrs):
+        x, _, _, _ = cv2.boundingRect(ctr)
+        if abs(x - prev) >= threshold:
+            cols.append(col)
+            col = []
+        col.append(i)
+        prev = x
+    if col:
+        cols.append(col)
+
+    # Sort rectangles in columns (sort by y)
+    sorted_ctrs = []
+    for col in cols:
+        col_ctrs = [ ctrs[i] for i in col ]
+        sorted_col_ctrs = sorted(col_ctrs, key=lambda ctr: cv2.boundingRect(ctr)[1])
+        sorted_ctrs.append(sorted_col_ctrs)
+
+    sorted_ctrs = flatten(sorted_ctrs)
+
+    return sorted_ctrs
+
+# Flatten a list of lists
+def flatten(lst):
+    return [item for sublist in lst for item in sublist]
+
+# Find elements of text inside a section
 def find_text(section, verbose=False, section_idx=None, dirname="results"):
     binary = binarize(section)
     if section_idx is None:
@@ -97,14 +138,11 @@ def find_text(section, verbose=False, section_idx=None, dirname="results"):
 
     # TODO: automate finding text width
     text_width = 35
-
     size = (text_width // 2, 10)
-    # TODO: correctly sort text (left to right and top to bottom)
-    def sort_key(ctr):
-        x, y, w, h = cv2.boundingRect(ctr)
-        xx, yy = x + w, y + h
-        return -xx # right to left, bottom to top
-    ctrs = find_contours_text(section, size, verbose=verbose, sort_key=sort_key)
+
+    ctrs = find_contours_text(section, size, verbose=verbose, sort_key=None)
+    ctrs = sort_contours(ctrs)
+
     fname = "{}/section{}_annotated.png".format(dirname, section_idx)
     draw_contours(ctrs, section, w_rect=2, fname=fname, verbose=verbose)
 

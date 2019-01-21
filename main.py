@@ -33,7 +33,7 @@ def find_contours_text(img, kernel_size, verbose=False, sort_key=None):
         cv2.waitKey(0)
 
     # find contours
-    im2, ctrs, _ = cv2.findContours(dilation.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    ctrs, _ = cv2.findContours(dilation.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     if sort_key is None:
         sort_key = lambda ctr: cv2.boundingRect(ctr)[0]

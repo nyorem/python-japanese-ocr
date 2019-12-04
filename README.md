@@ -19,6 +19,13 @@
 pacman -S opencv tesseract-ocr-git tesseract-data-jpn
 ```
 
+### Ubuntu / Mint
+
+```
+sudo apt-get install -y tesseract-ocr tesseract-ocr-jpn-vert
+sudo apt-get install -y python3-opencv
+```
+
 ## How to use
 
 ```
